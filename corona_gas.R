@@ -1,7 +1,6 @@
 # COVID-19 pandemic visualisation by Niklaus Fankhauser
 
 library("ggplot2")
-library("sf")
 nb_interFrames <- 25
 nb_endDays <- 20
 infected_per_point <- 1000
@@ -56,14 +55,14 @@ country_recode <- function(covid, world) {
 world <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
 
 sfc_shift <- function(geometry, x=0, y=0) {
-	polygons <- st_cast(geometry, "POLYGON")
+	polygons <- sf::st_cast(geometry, "POLYGON")
 	matrixList <- list()
 	for (i in 1:nrow(polygons)) {
 		tm <- matrix(rep(c(x, y), nrow(polygons[i,]$geometry[[1]][[1]])), ncol=2, byrow=TRUE)		
 		matrixList[[i]] <- polygons[i,]$geometry[[1]][[1]] + tm
 	}
-	mpoly <- st_multipolygon(list(matrixList))
-	st_make_valid(st_sf(st_sfc(mpoly, crs=st_crs(geometry))))
+	mpoly <- sf::st_multipolygon(list(matrixList))
+	sf::st_make_valid(sf::st_sf(sf::st_sfc(mpoly, crs=sf::st_crs(geometry))))
 }
 
 for (i in 1:nrow(world)) if (world[i, "continent"]$continent %in% c("North America", "South America")) world[i, "geometry"] <- sfc_shift(world[i, "geometry"], x=america_shift)
@@ -74,8 +73,8 @@ covid_dead <- country_recode(covid_dead, world)
 
 country_points <- function(lat, long, country_name, nb_points) {
 	if (world[world$name == country_name, "continent"]$continent %in% c("North America", "South America")) long <- long + america_shift
-	polygons <- st_cast(world[world$name == country_name, "geometry"], "POLYGON")
-	polymatch <- as.vector(st_within(st_point(c(long, lat)), polygons, sparse = FALSE))
+	polygons <- sf::st_cast(world[world$name == country_name, "geometry"], "POLYGON")
+	polymatch <- as.vector(sf::st_within(sf::st_point(c(long, lat)), polygons, sparse = FALSE))
 	if (sum(polymatch) == 0) {
 		write(sprintf("%s: Coordiante not found in any geometry.", country_name), file=logfile, append=TRUE)
 		return(NULL)
@@ -199,8 +198,8 @@ for (nowi in 1:length(covdates2)) {
 			cpti <- cpt[cpt$country == country_name,]
 			polygons <- st_cast(world[world$name == country_name, "geometry"], "POLYGON")
 			geom <- polygons[cpti$country_polygon[1],]
-			points_sf <- st_as_sf(cpti, coords=c("long", "lat"), crs=st_crs(geom))
-			pointmatch <- st_within(points_sf, geom, sparse=FALSE)
+			points_sf <- sf::st_as_sf(cpti, coords=c("long", "lat"), crs=sf::st_crs(geom))
+			pointmatch <- sf::st_within(points_sf, geom, sparse=FALSE)
 			cpt[cpt$country == country_name, "inside"] <- pointmatch
 		}
 		# Move back inside polygon if outside
