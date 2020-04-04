@@ -188,7 +188,8 @@ for (nowi in 1:length(covdates2)) {
 		ofn <- sprintf("%s/frame%05d.png", outdir, framenum)
 		framenum <- framenum + 1
 		if (now > max(covdates)) nowk <- max(covdates) else nowk <- now
-		p <- p0 + geom_point(aes(x=long, y=lat, color=status), data=cpt, alpha=0.5, size=3) + ggtitle(nowk)
+		cptr <- cpt[nrow(cpt):1,] # To make the earliest infected (and dead) visible on top
+		p <- p0 + geom_point(aes(x=long, y=lat, color=status), data=cptr, alpha=0.5, size=3) + ggtitle(nowk)
 		png(filename=ofn, width=1600, height=750, bg="black")
 		print(p)
 		dev.off()
