@@ -82,7 +82,7 @@ country_points <- function(lat, long, country_name, nb_points) {
 		return(NULL)
 	}
 	geom <- polygons[which(polymatch),]
-	bbox <- st_bbox(geom)
+	bbox <- sf::st_bbox(geom)
 	nb_points2 <- nb_points * 10
 	points <- data.frame(
 		country=country_name,
@@ -95,8 +95,8 @@ country_points <- function(lat, long, country_name, nb_points) {
 		inside=TRUE,
 		stringsAsFactors=FALSE
 	)
-	points_sf <- st_as_sf(points, coords=c("long", "lat"), crs=st_crs(geom))
-	points2 <- points[st_within(points_sf, geom, sparse=FALSE),]
+	points_sf <- sf::st_as_sf(points, coords=c("long", "lat"), crs=sf::st_crs(geom))
+	points2 <- points[sf::st_within(points_sf, geom, sparse=FALSE),]
 	points2[1:nb_points,]
 }
 
@@ -199,7 +199,7 @@ for (nowi in 1:length(covdates2)) {
 		# Check if still inside country polygon
 		for (country_name in unique(cpt$country)) {
 			cpti <- cpt[cpt$country == country_name,]
-			polygons <- st_cast(world[world$name == country_name, "geometry"], "POLYGON")
+			polygons <- sf::st_cast(world[world$name == country_name, "geometry"], "POLYGON")
 			geom <- polygons[cpti$country_polygon[1],]
 			points_sf <- sf::st_as_sf(cpti, coords=c("long", "lat"), crs=sf::st_crs(geom))
 			pointmatch <- sf::st_within(points_sf, geom, sparse=FALSE)
