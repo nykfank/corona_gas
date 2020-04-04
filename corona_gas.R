@@ -1,4 +1,5 @@
 # COVID-19 pandemic visualisation by Niklaus Fankhauser
+# git clone https://github.com/CSSEGISandData/COVID-19
 
 library("ggplot2")
 nb_interFrames <- 25
