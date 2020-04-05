@@ -1,6 +1,6 @@
 # COVID-19 pandemic visualisation by Niklaus Fankhauser
 # git clone https://github.com/CSSEGISandData/COVID-19
-# Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, git2r
+# Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, git2r, plyr
 
 library("ggplot2")
 nb_interFrames <- 25
@@ -249,10 +249,10 @@ system(cmd)
 html <- sprintf('<html><head><title>COVID-19 pandemic visualisation by Niklaus Fankhauser</title></head><body style="background:black;color:white">
 <h1>COVID-19 pandemic visualisation by Niklaus Fankhauser</h1>
 <video controls autoplay loop><source src="%s" type="video/mp4"></video> 
-<p>The idea is to represent the spread of the pandemic as ideal gases inside each country.
-Dots represents 1000 infected (green) or dead (red).</p>
-<p>Based on data from <i>2019 Novel Coronavirus COVID-19 (2019-nCoV) Data Repository by Johns Hopkins CSSE.</i></p>
-<p>Updated on %s</p>
+<p>The spread of the pandemic is represented as ideal gases inside each country.
+Each dot corresponds to 1000 infected (green) or dead (red).</p>
+<p>Data source: https://github.com/CSSEGISandData/COVID-19</p>
+<p>Updated: %s</p>
 </body></html>', videofile, Sys.time())
 write(html, file="corona.html")
 
