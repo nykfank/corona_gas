@@ -7,11 +7,25 @@ nb_interFrames <- 25
 nb_endDays <- 20
 infected_per_point <- 1000
 america_shift <- 40 # Shift America eastwards to reduce width of map
-cummulative <- TRUE
+use_recovered <- FALSE
+use_make_valid <- TRUE
 outdir <- "/tmp/frames_corovir"
 logfile <- "corovir_output.txt"
 webserver_path <- "nyk:/var/www/nf/"
 videofile <- sprintf("corovideo_%s.mp4", gsub("-", "", Sys.Date()))
+
+sfc_shift <- function(geometry, x=0, y=0) {
+	polygons <- sf::st_cast(geometry, "POLYGON")
+	matrixList <- list()
+	for (i in 1:nrow(polygons)) {
+		tm <- matrix(rep(c(x, y), nrow(polygons[i,]$geometry[[1]][[1]])), ncol=2, byrow=TRUE)		
+		matrixList[[i]] <- polygons[i,]$geometry[[1]][[1]] + tm
+	}
+	mpoly <- sf::st_multipolygon(list(matrixList))
+	sf_mpoly <- sf::st_sf(sf::st_sfc(mpoly, crs=sf::st_crs(geometry)))
+	if (!use_make_valid) return(sf_mpoly)
+	return(sf::st_make_valid(sf_mpoly))
+}
 
 # Update local copy
 git2r::pull("COVID-19")
@@ -57,17 +71,7 @@ country_recode <- function(covid, world) {
 # Prepare world map
 world <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
 
-sfc_shift <- function(geometry, x=0, y=0) {
-	polygons <- sf::st_cast(geometry, "POLYGON")
-	matrixList <- list()
-	for (i in 1:nrow(polygons)) {
-		tm <- matrix(rep(c(x, y), nrow(polygons[i,]$geometry[[1]][[1]])), ncol=2, byrow=TRUE)		
-		matrixList[[i]] <- polygons[i,]$geometry[[1]][[1]] + tm
-	}
-	mpoly <- sf::st_multipolygon(list(matrixList))
-	sf::st_make_valid(sf::st_sf(sf::st_sfc(mpoly, crs=sf::st_crs(geometry))))
-}
-
+# Shift America east
 for (i in 1:nrow(world)) if (world[i, "continent"]$continent %in% c("North America", "South America")) world[i, "geometry"] <- sfc_shift(world[i, "geometry"], x=america_shift)
 
 covid <- country_recode(covid, world)
@@ -84,14 +88,14 @@ country_points <- function(lat, long, country_name, nb_points) {
 	}
 	geom <- polygons[which(polymatch),]
 	bbox <- sf::st_bbox(geom)
-	nb_points2 <- nb_points * 10
+	nb_points2 <- nb_points * 5
 	points <- data.frame(
 		country=country_name,
 		country_polygon=which(polymatch),
-		long=rnorm(nb_points2, mean=long, sd=(bbox$xmax - bbox$xmin) / 4), 
-		lat=rnorm(nb_points2, mean=lat, sd=(bbox$ymax - bbox$ymin) / 4), 
-		xvec=rnorm(nb_points2, mean=0, sd=0.2), 
-		yvec=rnorm(nb_points2, mean=0, sd=0.2),
+		long=rnorm(nb_points2, mean=long, sd=(bbox$xmax - bbox$xmin) / 5),
+		lat=rnorm(nb_points2, mean=lat, sd=(bbox$ymax - bbox$ymin) / 5), 
+		xvec=rnorm(nb_points2, mean=0, sd=0.15), 
+		yvec=rnorm(nb_points2, mean=0, sd=0.15),
 		status="infected",
 		inside=TRUE,
 		stringsAsFactors=FALSE
@@ -138,7 +142,7 @@ for (nowi in 1:length(covdates2)) {
 		if (as.character(now-1) %in% colnames(covid_rec)) oldrec <- covid_rec[i, as.character(now-1)] else oldrec <- 0
 		if (is.na(oldrec)) oldrec <- 0
 		newrec <- newrec - oldrec
-		if (cummulative) covid[i, "change"] <- covid[i, "change"] + newinf else covid[i, "change"] <- covid[i, "change"] + newinf - newrec
+		if (use_recovered) covid[i, "change"] <- covid[i, "change"] + newinf - newrec else covid[i, "change"] <- covid[i, "change"] + newinf
 		if (covid[i, "change"] > 0) { # Add points to table
 			nb_newpoints <- covid[i, "change"] %/% infected_per_point
 			covid[i, "change"] <- covid[i, "change"] %% infected_per_point
@@ -188,9 +192,15 @@ for (nowi in 1:length(covdates2)) {
 		# Write map as PNG
 		ofn <- sprintf("%s/frame%05d.png", outdir, framenum)
 		framenum <- framenum + 1
+		# Compute point size per country
+		countryCount <- as.data.frame.table(table(cpt$country))
+		countryCount$psize <- 4 - log(countryCount$Freq)
+		countryCount[countryCount$psize < 1, "psize"] <- 1
+		colnames(countryCount)[1] <- "country"
+		cpt_psize <- plyr::join(cpt, countryCount, by="country")
+		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
 		if (now > max(covdates)) nowk <- max(covdates) else nowk <- now
-		cptr <- cpt[nrow(cpt):1,] # To make the earliest infected (and dead) visible on top
-		p <- p0 + geom_point(aes(x=long, y=lat, color=status), data=cptr, alpha=0.5, size=3) + ggtitle(nowk)
+		p <- p0 + geom_point(aes(x=long, y=lat, color=status, size=psize), data=cptr, alpha=0.5) + ggtitle(nowk)
 		png(filename=ofn, width=1600, height=750, bg="black")
 		print(p)
 		dev.off()
@@ -250,3 +260,4 @@ write(html, file="corona.html")
 cmd <- sprintf("rsync -vrpe ssh corona.html %s", webserver_path)
 write(cmd, file=logfile, append=TRUE)
 system(cmd)
+unlink("corona.html")
