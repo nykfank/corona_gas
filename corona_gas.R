@@ -7,6 +7,7 @@ nb_interFrames <- 25
 nb_endDays <- 20
 infected_per_point <- 1000
 america_shift <- 40 # Shift America eastwards to reduce width of map
+cummulative <- TRUE
 outdir <- "/tmp/frames_corovir"
 logfile <- "corovir_output.txt"
 webserver_path <- "nyk:/var/www/nf/"
@@ -137,7 +138,7 @@ for (nowi in 1:length(covdates2)) {
 		if (as.character(now-1) %in% colnames(covid_rec)) oldrec <- covid_rec[i, as.character(now-1)] else oldrec <- 0
 		if (is.na(oldrec)) oldrec <- 0
 		newrec <- newrec - oldrec
-		covid[i, "change"] <- covid[i, "change"] + newinf - newrec
+		if (cummulative) covid[i, "change"] <- covid[i, "change"] + newinf else covid[i, "change"] <- covid[i, "change"] + newinf - newrec
 		if (covid[i, "change"] > 0) { # Add points to table
 			nb_newpoints <- covid[i, "change"] %/% infected_per_point
 			covid[i, "change"] <- covid[i, "change"] %% infected_per_point
