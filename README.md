@@ -1,4 +1,4 @@
-# COVID-19 pandemic visualisation
+# Corona-Gas: COVID-19 pandemic visualisation
 
 The idea is to represent the spread of the pandemic as ideal gases inside each country.
 Dots represents 1000 infected (green) or dead (red).
