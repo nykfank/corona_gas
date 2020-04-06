@@ -9,6 +9,7 @@ infected_per_point <- 1000
 america_shift <- 40 # Shift America eastwards to reduce width of map
 use_recovered <- FALSE
 use_make_valid <- TRUE
+if (packageVersion("sp") == "1.3.1") use_make_valid <- FALSE # Not required in sp v1.3.1, but in v1.4.1, it is.
 outdir <- "/tmp/frames_corovir"
 logfile <- "corovir_output.txt"
 webserver_path <- "nyk:/var/www/nf/"
@@ -70,6 +71,8 @@ country_recode <- function(covid, world) {
 
 # Prepare world map
 world <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
+world$area <- units::drop_units(units::set_units(sf::st_area(world[, "geometry"]), km^2))
+countryArea <- as.data.frame(world)[c("name", "area")]
 
 # Shift America east
 for (i in 1:nrow(world)) if (world[i, "continent"]$continent %in% c("North America", "South America")) world[i, "geometry"] <- sfc_shift(world[i, "geometry"], x=america_shift)
@@ -194,13 +197,15 @@ for (nowi in 1:length(covdates2)) {
 		framenum <- framenum + 1
 		# Compute point size per country
 		countryCount <- as.data.frame.table(table(cpt$country))
-		countryCount$psize <- 4 - log(countryCount$Freq, base=10)
-		countryCount[countryCount$psize < 2, "psize"] <- 2
+		countryCount$psize <- 5 - log(countryCount$Freq, base=7)
 		colnames(countryCount)[1] <- "country"
+		countryCount <- plyr::join(countryCount, countryArea, by="country")
+		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 1000 # Adapt to country size
+		countryCount[countryCount$psize < 1.5, "psize"] <- 1.5 # Minimum size for visibility
 		cpt_psize <- plyr::join(cpt, countryCount, by="country")
 		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
 		if (now > max(covdates)) nowk <- max(covdates) else nowk <- now
-		p <- p0 + geom_point(aes(x=long, y=lat, color=status, size=psize), data=cptr, alpha=0.5) + ggtitle(nowk)
+		p <- p0 + geom_point(aes(x=long, y=lat, color=status, size=psize), data=cptr, alpha=0.5) + scale_size_identity() + ggtitle(nowk)
 		png(filename=ofn, width=1600, height=750, bg="black")
 		print(p)
 		dev.off()
@@ -237,12 +242,10 @@ for (nowi in 1:length(covdates2)) {
 
 # Create video from frames
 cmd <- sprintf("ffmpeg -y -i %s/frame%%05d.png -c:v libx264 -strict -2 -pix_fmt yuv420p -f mp4 %s", outdir, videofile)
-write(cmd, file=logfile, append=TRUE)
 system(cmd)
 
 # Upload to webserver
 cmd <- sprintf("rsync -vrpe ssh %s %s", videofile, webserver_path)
-write(cmd, file=logfile, append=TRUE)
 system(cmd)
 
 # HTML5 video player
@@ -258,6 +261,5 @@ write(html, file="corona.html")
 
 # Upload to webserver
 cmd <- sprintf("rsync -vrpe ssh corona.html %s", webserver_path)
-write(cmd, file=logfile, append=TRUE)
 system(cmd)
 unlink("corona.html")
