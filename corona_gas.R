@@ -194,8 +194,8 @@ for (nowi in 1:length(covdates2)) {
 		framenum <- framenum + 1
 		# Compute point size per country
 		countryCount <- as.data.frame.table(table(cpt$country))
-		countryCount$psize <- 4 - log(countryCount$Freq)
-		countryCount[countryCount$psize < 1, "psize"] <- 1
+		countryCount$psize <- 4 - log(countryCount$Freq, base=10)
+		countryCount[countryCount$psize < 2, "psize"] <- 2
 		colnames(countryCount)[1] <- "country"
 		cpt_psize <- plyr::join(cpt, countryCount, by="country")
 		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
