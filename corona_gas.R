@@ -6,14 +6,23 @@ library("ggplot2")
 nb_interFrames <- 25
 nb_endDays <- 20
 infected_per_point <- 1000
-america_shift <- 40 # Shift America eastwards to reduce width of map
+america_shift <- 35 # Shift America eastwards to reduce width of map
+australia_shift <- -55
+australia_shift_y <- 10
 use_recovered <- FALSE
 use_make_valid <- TRUE
 if (packageVersion("sp") == "1.3.1") use_make_valid <- FALSE # Not required in sp v1.3.1, but in v1.4.1, it is.
 outdir <- "/tmp/frames_corovir"
-logfile <- "corovir_output.txt"
+logfile <- "output_corona_gas.txt"
+if (file.exists(logfile)) unlink(logfile)
 webserver_path <- "nyk:/var/www/nf/"
 videofile <- sprintf("corovideo_%s.mp4", gsub("-", "", Sys.Date()))
+
+logWrite <- function(string, ...) {
+	logText <- sprintf("%s: %s", Sys.time(), sprintf(string, ...))
+	writeLines(logText)
+	write(logText, file=logfile, append=TRUE)
+}
 
 sfc_shift <- function(geometry, x=0, y=0) {
 	polygons <- sf::st_cast(geometry, "POLYGON")
@@ -29,8 +38,10 @@ sfc_shift <- function(geometry, x=0, y=0) {
 }
 
 # Update local copy
+logWrite("Checking git for updates...")
 git2r::pull("COVID-19")
 # Load COVID data
+logWrite("Loading COVID data...")
 covid <- read.csv("COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", stringsAsFactors=FALSE)
 covid_rec <- read.csv("COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", stringsAsFactors=FALSE)
 covid_dead <- read.csv("COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", stringsAsFactors=FALSE)
@@ -39,8 +50,8 @@ covdates <- as.Date(strptime(colnames(covid)[5:ncol(covid)], "X%m.%d.%y"))
 if (file.exists(".latest_covid_date.txt")) {
 	ldate <- as.Date(scan(file=".latest_covid_date.txt", what="character"))
 	if (max(covdates) <= ldate) {
-		writeLines("No new data!")
-		stop("No need to run")
+		logWrite("No new data")
+		#stop("No need to run!")
 	}
 }
 write(as.character(max(covdates)), file=".latest_covid_date.txt")
@@ -73,13 +84,16 @@ country_recode <- function(covid, world) {
 }
 
 # Prepare world map
+logWrite("Loading map data...")
 world <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
 world$area <- units::drop_units(units::set_units(sf::st_area(world[, "geometry"]), km^2))
 countryArea <- as.data.frame(world)[c("name", "area")]
 colnames(countryArea)[1] <- "country"
 
-# Shift America east
+logWrite("Shift America east...")
 for (i in 1:nrow(world)) if (world[i, "continent"]$continent %in% c("North America", "South America")) world[i, "geometry"] <- sfc_shift(world[i, "geometry"], x=america_shift)
+logWrite("Shift Australia west...")
+for (i in 1:nrow(world)) if (world[i, "name"]$name == "Australia") world[i, "geometry"] <- sfc_shift(world[i, "geometry"], x=australia_shift, y=australia_shift_y)
 
 covid <- country_recode(covid, world)
 covid_rec <- country_recode(covid_rec, world)
@@ -87,15 +101,19 @@ covid_dead <- country_recode(covid_dead, world)
 
 country_points <- function(lat, long, country_name, nb_points) {
 	if (world[world$name == country_name, "continent"]$continent %in% c("North America", "South America")) long <- long + america_shift
+	if (world[i, "name"]$name == "Australia") {
+		long <- long + australia_shift
+		lat <- lat + australia_shift
+	}
 	polygons <- sf::st_cast(world[world$name == country_name, "geometry"], "POLYGON")
 	polymatch <- as.vector(sf::st_within(sf::st_point(c(long, lat)), polygons, sparse = FALSE))
 	if (sum(polymatch) == 0) {
-		write(sprintf("%s: Coordiante not found in any geometry.", country_name), file=logfile, append=TRUE)
+		logWrite("%s: Coordiante not found in any geometry.", country_name)
 		return(NULL)
 	}
 	geom <- polygons[which(polymatch),]
 	bbox <- sf::st_bbox(geom)
-	nb_points2 <- nb_points * 5
+	nb_points2 <- nb_points * 10
 	points <- data.frame(
 		country=country_name,
 		country_polygon=which(polymatch),
@@ -113,8 +131,8 @@ country_points <- function(lat, long, country_name, nb_points) {
 }
 
 # Prepare map plot
-worldPlot <- geom_sf(data=world, fill="black") 
-viewBox <- coord_sf(xlim=c(-125+america_shift, 145), ylim=c(-35, 70), expand=FALSE)
+worldPlot <- geom_sf(data=world, fill="gray9") 
+viewBox <- coord_sf(xlim=c(-125+america_shift, 145), ylim=c(-35, 65), expand=FALSE)
 pointColors <- scale_color_manual(values=c("green", "red"))
 plotTheme <- theme(
 	legend.position = "none", 
@@ -122,12 +140,11 @@ plotTheme <- theme(
 	axis.title.y=element_blank(), 
 	plot.background=element_rect(fill = "black"), 
 	panel.background = element_rect(fill = "midnightblue"), 
-	plot.title=element_text(color = "lightgray")
+	plot.title=element_text(color = "yellow", size=20)
 )
 p0 <- ggplot() + worldPlot + viewBox + plotTheme + pointColors
 
 # Prepare output directory
-if (file.exists(logfile)) unlink(logfile)
 if (!dir.exists(outdir)) dir.create(outdir)
 for (i in list.files(outdir, full.names=TRUE)) unlink(i)
 
@@ -156,7 +173,7 @@ for (nowi in 1:length(covdates2)) {
 			if (nb_newpoints > 0) {
 				cp <- country_points(covid[i, "Lat"], covid[i, "Long"], covid[i, "country_name"], nb_newpoints)
 				if (exists("cpt")) cpt <- rbind(cpt, cp) else cpt <- cp
-				write(sprintf("%s: Infected %d * %d in %s (%d left)", now, nb_newpoints, infected_per_point, covid[i, "country_name"], covid[i, "change"]), file=logfile, append=TRUE)
+				logWrite("%s: Infected %d * %d in %s (%d left)", now, nb_newpoints, infected_per_point, covid[i, "country_name"], covid[i, "change"])
 			}
 		}
 		if (covid[i, "change"] < 0 & exists("cpt")) { # Remove points from table
@@ -166,7 +183,7 @@ for (nowi in 1:length(covdates2)) {
 				coi <- cpt[cpt$country == covid[i, "country_name"] & cpt$status == "infected",]
 				remrows <- rownames(coi)[1:nb_recpoints]
 				cpt <- cpt[!rownames(cpt) %in% remrows,]
-				write(sprintf("%s: Recovered %d * %d in %s (%d left)", now, nb_recpoints, infected_per_point, covid[i, "country_name"], covid[i, "change"]), file=logfile, append=TRUE)
+				logWrite("%s: Recovered %d * %d in %s (%d left)", now, nb_recpoints, infected_per_point, covid[i, "country_name"], covid[i, "change"])
 			}
 		}
 		# Newly died
@@ -184,13 +201,13 @@ for (nowi in 1:length(covdates2)) {
 				cpt[rownames(cpt) %in% deadrows, "status"] <- "dead"
 				cpt[rownames(cpt) %in% deadrows, "xvec"] <- 0
 				cpt[rownames(cpt) %in% deadrows, "yvec"] <- 0
-				write(sprintf("%s: Died %d * %d in %s (%d left)", now, nb_deadpoints, infected_per_point, covid[i, "country_name"], covid[i, "change_dead"]), file=logfile, append=TRUE)
+				logWrite("%s: Died %d * %d in %s (%d left)", now, nb_deadpoints, infected_per_point, covid[i, "country_name"], covid[i, "change_dead"])
 			}
 		}
 	}
 	if (!exists("cpt")) next
 	if (nrow(cpt) == 0) next
-	write(sprintf("%s: Missing: %d of %d (%2.2f%%)", now, sum(is.na(cpt$lat)), nrow(cpt), 100 * sum(is.na(cpt$lat)) / nrow(cpt)), file=logfile, append=TRUE)
+	logWrite("%s: Missing: %d of %d (%2.2f%%)", now, sum(is.na(cpt$lat)), nrow(cpt), 100 * sum(is.na(cpt$lat)) / nrow(cpt))
 	print(table(cpt$country))
 	cpt <- cpt[!is.na(cpt$lat),]
 	cpt$status <- factor(cpt$status, levels=c("infected", "dead"))
@@ -237,7 +254,7 @@ for (nowi in 1:length(covdates2)) {
 		touchIndex <- touchPairs[touchPairs[,1] != touchPairs[,2], 1] # Remove self distance
 		# Randomly invert movement vector in case of collision
 		if (length(touchIndex) > 0) {
-			write(sprintf("%s: %d collisions", now, length(touchIndex)), file=logfile, append=TRUE)
+			logWrite("%s: %d collisions", now, length(touchIndex))
 			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
 			cpt[touchIndex, "yvec"] <- cpt[touchIndex, "yvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
 		}
