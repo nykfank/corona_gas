@@ -2,7 +2,6 @@
 # git clone https://github.com/CSSEGISandData/COVID-19
 # Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, lwgeom, git2r, plyr
 
-library("ggplot2")
 nb_interFrames <- 25
 nb_endDays <- 20
 infected_per_point <- 1000
@@ -11,12 +10,14 @@ australia_shift <- -55
 australia_shift_y <- 10
 use_recovered <- FALSE
 use_make_valid <- TRUE
-if (packageVersion("sp") == "1.3.1") use_make_valid <- FALSE # Not required in sp v1.3.1, but in v1.4.1, it is.
 outdir <- "/tmp/frames_corovir"
 logfile <- "output_corona_gas.txt"
-if (file.exists(logfile)) unlink(logfile)
 webserver_path <- "nyk:/var/www/nf/"
 videofile <- sprintf("corovideo_%s.mp4", gsub("-", "", Sys.Date()))
+
+library("ggplot2")
+if (packageVersion("sp") == "1.3.1") use_make_valid <- FALSE # Not required in sp v1.3.1, but in v1.4.1, it is.
+if (file.exists(logfile)) unlink(logfile)
 
 logWrite <- function(string, ...) {
 	logText <- sprintf("%s: %s", Sys.time(), sprintf(string, ...))
@@ -264,7 +265,6 @@ for (nowi in 1:length(covdates2)) {
 # Create video from frames
 cmd <- sprintf("ffmpeg -y -i %s/frame%%05d.png -c:v libx264 -strict -2 -pix_fmt yuv420p -f mp4 %s", outdir, videofile)
 system(cmd)
-
 # Upload to webserver
 cmd <- sprintf("rsync -vrpe ssh %s %s", videofile, webserver_path)
 system(cmd)
@@ -276,7 +276,7 @@ html <- sprintf('<html><head>
 	<h1>COVID-19 pandemic visualisation by Niklaus Fankhauser</h1>
 	<video controls autoplay loop><source src="%s" type="video/mp4"></video> 
 	<p>The spread of the pandemic is represented as ideal gases inside each country.
-	Each dot corresponds to 1000 infected (green) or dead (red).</p>
+	Each dot corresponds to 1000 infected (green) or dead (red). Size of points is inversely proportional to country area and number of points in country.</p>
 	<p>Created by Niklaus Fankhauser. Updated: %s</p>
 	<p>Data source: https://github.com/CSSEGISandData/COVID-19</p>
 	</body></html>', videofile, Sys.time())
