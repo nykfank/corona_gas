@@ -38,7 +38,10 @@ covdates <- as.Date(strptime(colnames(covid)[5:ncol(covid)], "X%m.%d.%y"))
 # Check of there is new data
 if (file.exists(".latest_covid_date.txt")) {
 	ldate <- as.Date(scan(file=".latest_covid_date.txt", what="character"))
-	if (max(covdates) <= ldate) writeLines("No new data!")
+	if (max(covdates) <= ldate) {
+		writeLines("No new data!")
+		stop("No need to run")
+	}
 }
 write(as.character(max(covdates)), file=".latest_covid_date.txt")
 
@@ -250,14 +253,16 @@ cmd <- sprintf("rsync -vrpe ssh %s %s", videofile, webserver_path)
 system(cmd)
 
 # HTML5 video player
-html <- sprintf('<html><head><title>COVID-19 pandemic visualisation by Niklaus Fankhauser</title></head><body style="background:black;color:white">
-<h1>COVID-19 pandemic visualisation by Niklaus Fankhauser</h1>
-<video controls autoplay loop><source src="%s" type="video/mp4"></video> 
-<p>The spread of the pandemic is represented as ideal gases inside each country.
-Each dot corresponds to 1000 infected (green) or dead (red).</p>
-<p>Data source: https://github.com/CSSEGISandData/COVID-19</p>
-<p>Updated: %s</p>
-</body></html>', videofile, Sys.time())
+html <- sprintf('<html><head>
+	<title>COVID-19 pandemic visualisation</title></head>
+	<body style="background:black;color:white">
+	<h1>COVID-19 pandemic visualisation by Niklaus Fankhauser</h1>
+	<video controls autoplay loop><source src="%s" type="video/mp4"></video> 
+	<p>The spread of the pandemic is represented as ideal gases inside each country.
+	Each dot corresponds to 1000 infected (green) or dead (red).</p>
+	<p>Created by Niklaus Fankhauser. Updated: %s</p>
+	<p>Data source: https://github.com/CSSEGISandData/COVID-19</p>
+	</body></html>', videofile, Sys.time())
 write(html, file="corona.html")
 
 # Upload to webserver
