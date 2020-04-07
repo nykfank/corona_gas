@@ -73,6 +73,7 @@ country_recode <- function(covid, world) {
 world <- rnaturalearth::ne_countries(scale = "large", returnclass = "sf")
 world$area <- units::drop_units(units::set_units(sf::st_area(world[, "geometry"]), km^2))
 countryArea <- as.data.frame(world)[c("name", "area")]
+colnames(countryArea)[1] <- "country"
 
 # Shift America east
 for (i in 1:nrow(world)) if (world[i, "continent"]$continent %in% c("North America", "South America")) world[i, "geometry"] <- sfc_shift(world[i, "geometry"], x=america_shift)
@@ -200,7 +201,7 @@ for (nowi in 1:length(covdates2)) {
 		countryCount$psize <- 5 - log(countryCount$Freq, base=7)
 		colnames(countryCount)[1] <- "country"
 		countryCount <- plyr::join(countryCount, countryArea, by="country")
-		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 1000 # Adapt to country size
+		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 1500 # Adapt to country size
 		countryCount[countryCount$psize < 1.5, "psize"] <- 1.5 # Minimum size for visibility
 		cpt_psize <- plyr::join(cpt, countryCount, by="country")
 		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
