@@ -1,6 +1,6 @@
 # COVID-19 pandemic visualisation by Niklaus Fankhauser
 # git clone https://github.com/CSSEGISandData/COVID-19
-# Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, git2r, plyr
+# Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, lwgeom, git2r, plyr
 
 library("ggplot2")
 nb_interFrames <- 25
