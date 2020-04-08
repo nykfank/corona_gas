@@ -16,7 +16,6 @@ webserver_path <- "nyk:/var/www/nf/"
 videofile <- sprintf("corovideo_%s.mp4", gsub("-", "", Sys.Date()))
 
 library("ggplot2")
-if (packageVersion("sp") == "1.3.1") use_make_valid <- FALSE # Not required in sp v1.3.1, but in v1.4.1, it is.
 
 logWrite <- function(string, ...) {
 	logText <- sprintf("%s: %s", Sys.time(), sprintf(string, ...))
@@ -32,9 +31,7 @@ sfc_shift <- function(geometry, x=0, y=0) {
 		matrixList[[i]] <- polygons[i,]$geometry[[1]][[1]] + tm
 	}
 	mpoly <- sf::st_multipolygon(list(matrixList))
-	sf_mpoly <- sf::st_sf(sf::st_sfc(mpoly, crs=sf::st_crs(geometry)))
-	if (!use_make_valid) return(sf_mpoly)
-	return(sf::st_make_valid(sf_mpoly))
+	sf::st_make_valid(sf::st_sf(sf::st_sfc(mpoly, crs=sf::st_crs(geometry))))
 }
 
 # Update local copy
@@ -101,7 +98,7 @@ covid_dead <- country_recode(covid_dead, world)
 
 country_points <- function(lat, long, country_name, nb_points) {
 	if (world[world$name == country_name, "continent"]$continent %in% c("North America", "South America")) long <- long + america_shift
-	if (world[i, "name"]$name == "Australia") {
+	if (country_name == "Australia") {
 		long <- long + australia_shift
 		lat <- lat + australia_shift_y
 	}
