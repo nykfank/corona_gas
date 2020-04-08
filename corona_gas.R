@@ -17,7 +17,6 @@ videofile <- sprintf("corovideo_%s.mp4", gsub("-", "", Sys.Date()))
 
 library("ggplot2")
 if (packageVersion("sp") == "1.3.1") use_make_valid <- FALSE # Not required in sp v1.3.1, but in v1.4.1, it is.
-if (file.exists(logfile)) unlink(logfile)
 
 logWrite <- function(string, ...) {
 	logText <- sprintf("%s: %s", Sys.time(), sprintf(string, ...))
@@ -52,7 +51,7 @@ if (file.exists(".latest_covid_date.txt")) {
 	ldate <- as.Date(scan(file=".latest_covid_date.txt", what="character"))
 	if (max(covdates) <= ldate) {
 		logWrite("No new data")
-		#stop("No need to run!")
+		stop("No need to run!")
 	}
 }
 write(as.character(max(covdates)), file=".latest_covid_date.txt")
@@ -273,10 +272,11 @@ system(cmd)
 html <- sprintf('<html><head>
 	<title>COVID-19 pandemic visualisation</title></head>
 	<body style="background:black;color:white">
-	<h1>COVID-19 pandemic visualisation by Niklaus Fankhauser</h1>
+	<h1>COVID-19 pandemic gaseous visualisation</h1>
 	<video controls autoplay loop><source src="%s" type="video/mp4"></video> 
 	<p>The spread of the pandemic is represented as ideal gases inside each country.
-	Each dot corresponds to 1000 infected (green) or dead (red). Size of points is inversely proportional to country area and number of points in country.</p>
+	Each dot corresponds to 1000 infected (green) or dead (red). 
+	Size of points is proportional to country area and number of points in country.</p>
 	<p>Created by Niklaus Fankhauser. Updated: %s</p>
 	<p>Data source: https://github.com/CSSEGISandData/COVID-19</p>
 	</body></html>', videofile, Sys.time())
