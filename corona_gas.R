@@ -103,7 +103,7 @@ country_points <- function(lat, long, country_name, nb_points) {
 	if (world[world$name == country_name, "continent"]$continent %in% c("North America", "South America")) long <- long + america_shift
 	if (world[i, "name"]$name == "Australia") {
 		long <- long + australia_shift
-		lat <- lat + australia_shift
+		lat <- lat + australia_shift_y
 	}
 	polygons <- sf::st_cast(world[world$name == country_name, "geometry"], "POLYGON")
 	polymatch <- as.vector(sf::st_within(sf::st_point(c(long, lat)), polygons, sparse = FALSE))
