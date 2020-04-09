@@ -3,7 +3,7 @@
 # Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, lwgeom, git2r, plyr
 
 nb_interFrames <- 25
-nb_endDays <- 20
+nb_endDays <- 60
 infected_per_point <- 1000
 america_shift <- 35 # Shift America eastwards to reduce width of map
 australia_shift <- -55
@@ -15,6 +15,7 @@ logfile <- "output_corona_gas.txt"
 webserver_path <- "nyk:/var/www/nf/"
 videofile <- sprintf("corovideo_%s.mp4", gsub("-", "", Sys.Date()))
 
+library("methods") # For Rscript
 library("ggplot2")
 
 logWrite <- function(string, ...) {
@@ -209,7 +210,8 @@ for (nowi in 1:length(covdates2)) {
 	cpt <- cpt[!is.na(cpt$lat),]
 	cpt$status <- factor(cpt$status, levels=c("infected", "dead"))
 	# Movement of points
-	for (i in 1:nb_interFrames) {
+	if (now < as.Date("2020-03-01")) nb_interFrames2 <- nb_interFrames %/% 3 else nb_interFrames2 <- nb_interFrames
+	for (i in 1:nb_interFrames2) {
 		# Write map as PNG
 		ofn <- sprintf("%s/frame%05d.png", outdir, framenum)
 		framenum <- framenum + 1
