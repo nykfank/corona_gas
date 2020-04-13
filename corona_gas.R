@@ -3,7 +3,7 @@
 # Requires: sf, ggplot2, rnaturalearth, rnaturalearthhires, rgeos, lwgeom, git2r, plyr
 
 nb_interFrames <- 25
-nb_endDays <- 60
+nb_endDays <- 30
 infected_per_point <- 1000
 america_shift <- 35 # Shift America eastwards to reduce width of map
 australia_shift <- -55
@@ -217,6 +217,7 @@ for (nowi in 1:length(covdates2)) {
 		framenum <- framenum + 1
 		# Compute point size per country
 		countryCount <- as.data.frame.table(table(cpt$country))
+		# pointSize = 5 - log(points_in_country, base=7) * sqrt(country_area_km2) / 1500
 		countryCount$psize <- 5 - log(countryCount$Freq, base=7)
 		colnames(countryCount)[1] <- "country"
 		countryCount <- plyr::join(countryCount, countryArea, by="country")
@@ -230,8 +231,8 @@ for (nowi in 1:length(covdates2)) {
 		print(p)
 		dev.off()
 		# Move according to vector
-		cpt$lat <- cpt$lat + cpt$xvec
-		cpt$long <- cpt$long + cpt$yvec
+		cpt$lat <- cpt$lat + cpt$yvec
+		cpt$long <- cpt$long + cpt$xvec
 		# Check if still inside country polygon
 		for (country_name in unique(cpt$country)) {
 			cpti <- cpt[cpt$country == country_name,]
@@ -242,11 +243,11 @@ for (nowi in 1:length(covdates2)) {
 			cpt[cpt$country == country_name, "inside"] <- pointmatch
 		}
 		# Move back inside polygon if outside
-		cpt[cpt$inside == FALSE, "lat"] <- cpt[cpt$inside == FALSE, "lat"] - cpt[cpt$inside == FALSE, "xvec"]
-		cpt[cpt$inside == FALSE, "long"] <- cpt[cpt$inside == FALSE, "long"] - cpt[cpt$inside == FALSE, "yvec"]
+		cpt[cpt$inside == FALSE, "lat"] <- cpt[cpt$inside == FALSE, "lat"] - cpt[cpt$inside == FALSE, "yvec"]
+		cpt[cpt$inside == FALSE, "long"] <- cpt[cpt$inside == FALSE, "long"] - cpt[cpt$inside == FALSE, "xvec"]
 		# Randomly invert movement vector
-		cpt[cpt$inside == FALSE, "xvec"] <- cpt[cpt$inside == FALSE, "xvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
 		cpt[cpt$inside == FALSE, "yvec"] <- cpt[cpt$inside == FALSE, "yvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
+		cpt[cpt$inside == FALSE, "xvec"] <- cpt[cpt$inside == FALSE, "xvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
 		# Collision detection
 		pDistMat <- sp::spDists(as.matrix(cpt[,c("long", "lat")])) # Create distance matrix
 		touchPairs <- which(pDistMat < 0.25, arr.ind=TRUE) # Distance below approximately 25km (50km)
@@ -254,8 +255,8 @@ for (nowi in 1:length(covdates2)) {
 		# Randomly invert movement vector in case of collision
 		if (length(touchIndex) > 0) {
 			logWrite("%s: %d collisions", now, length(touchIndex))
-			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
 			cpt[touchIndex, "yvec"] <- cpt[touchIndex, "yvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
+			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
 		}
 	}
 }
