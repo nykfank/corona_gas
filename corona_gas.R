@@ -222,7 +222,7 @@ for (nowi in 1:length(covdates2)) {
 		colnames(countryCount)[1] <- "country"
 		countryCount <- plyr::join(countryCount, countryArea, by="country")
 		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 1500 # Adapt to country size
-		countryCount[countryCount$psize < 0.5, "psize"] <- 0.5 # Minimum size for visibility
+		countryCount[countryCount$psize < 1, "psize"] <- 1 # Minimum size for visibility
 		cpt_psize <- plyr::join(cpt, countryCount, by="country")
 		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
 		if (now > max(covdates)) nowk <- max(covdates) else nowk <- now
