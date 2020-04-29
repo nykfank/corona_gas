@@ -111,7 +111,7 @@ country_points <- function(lat, long, country_name, nb_points) {
 	}
 	geom <- polygons[which(polymatch),]
 	bbox <- sf::st_bbox(geom)
-	nb_points2 <- nb_points * 10
+	nb_points2 <- nb_points * 5
 	points <- data.frame(
 		country=country_name,
 		country_polygon=which(polymatch),
@@ -217,7 +217,6 @@ for (nowi in 1:length(covdates2)) {
 		framenum <- framenum + 1
 		# Compute point size per country
 		countryCount <- as.data.frame.table(table(cpt$country))
-		# pointSize = 5 - log(points_in_country, base=7) * sqrt(country_area_km2) / 1500
 		countryCount$psize <- 5 - log(countryCount$Freq, base=7)
 		colnames(countryCount)[1] <- "country"
 		countryCount <- plyr::join(countryCount, countryArea, by="country")
