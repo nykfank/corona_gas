@@ -222,7 +222,7 @@ for (nowi in 1:length(covdates2)) {
 		colnames(countryCount)[1] <- "country"
 		countryCount <- plyr::join(countryCount, countryArea, by="country")
 		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 1500 # Adapt to country size
-		countryCount[countryCount$psize < 1.5, "psize"] <- 1.5 # Minimum size for visibility
+		countryCount[countryCount$psize < 0.5, "psize"] <- 0.5 # Minimum size for visibility
 		cpt_psize <- plyr::join(cpt, countryCount, by="country")
 		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
 		if (now > max(covdates)) nowk <- max(covdates) else nowk <- now
@@ -243,20 +243,20 @@ for (nowi in 1:length(covdates2)) {
 			cpt[cpt$country == country_name, "inside"] <- pointmatch
 		}
 		# Move back inside polygon if outside
-		cpt[cpt$inside == FALSE, "lat"] <- cpt[cpt$inside == FALSE, "lat"] - cpt[cpt$inside == FALSE, "yvec"]
 		cpt[cpt$inside == FALSE, "long"] <- cpt[cpt$inside == FALSE, "long"] - cpt[cpt$inside == FALSE, "xvec"]
+		cpt[cpt$inside == FALSE, "lat"] <- cpt[cpt$inside == FALSE, "lat"] - cpt[cpt$inside == FALSE, "yvec"]
 		# Randomly invert movement vector
-		cpt[cpt$inside == FALSE, "yvec"] <- cpt[cpt$inside == FALSE, "yvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
 		cpt[cpt$inside == FALSE, "xvec"] <- cpt[cpt$inside == FALSE, "xvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
+		cpt[cpt$inside == FALSE, "yvec"] <- cpt[cpt$inside == FALSE, "yvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
 		# Collision detection
 		pDistMat <- sp::spDists(as.matrix(cpt[,c("long", "lat")])) # Create distance matrix
-		touchPairs <- which(pDistMat < 0.25, arr.ind=TRUE) # Distance below approximately 25km (50km)
+		touchPairs <- which(pDistMat < 0.5, arr.ind=TRUE) # Distance below approximately 50km
 		touchIndex <- touchPairs[touchPairs[,1] != touchPairs[,2], 1] # Remove self distance
 		# Randomly invert movement vector in case of collision
 		if (length(touchIndex) > 0) {
 			logWrite("%s: %d collisions", now, length(touchIndex))
-			cpt[touchIndex, "yvec"] <- cpt[touchIndex, "yvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
-			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
+			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * -1
+			cpt[touchIndex, "yvec"] <- cpt[touchIndex, "yvec"] * -1
 		}
 	}
 }
