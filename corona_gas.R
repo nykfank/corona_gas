@@ -254,8 +254,8 @@ for (nowi in 1:length(covdates2)) {
 		# Randomly invert movement vector in case of collision
 		if (length(touchIndex) > 0) {
 			logWrite("%s: %d collisions", now, length(touchIndex))
-			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * -1
-			cpt[touchIndex, "yvec"] <- cpt[touchIndex, "yvec"] * -1
+			cpt[touchIndex, "xvec"] <- cpt[touchIndex, "xvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
+			cpt[touchIndex, "yvec"] <- cpt[touchIndex, "yvec"] * (2 * round(runif(length(touchIndex), min=0, max=1)) - 1)
 		}
 	}
 }
