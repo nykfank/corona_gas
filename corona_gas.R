@@ -4,7 +4,7 @@
 
 nb_interFrames <- 25
 nb_endDays <- 30
-infected_per_point <- 1000
+infected_per_point <- 10000
 america_shift <- 35 # Shift America eastwards to reduce width of map
 australia_shift <- -55
 australia_shift_y <- 10
@@ -220,7 +220,7 @@ for (nowi in 1:length(covdates2)) {
 		countryCount$psize <- 5 - log(countryCount$Freq, base=7)
 		colnames(countryCount)[1] <- "country"
 		countryCount <- plyr::join(countryCount, countryArea, by="country")
-		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 2000 # Adapt to country size
+		countryCount$psize <- countryCount$psize * sqrt(countryCount$area) / 2500 # Adapt to country size
 		countryCount[countryCount$psize < 1, "psize"] <- 1 # Minimum size for visibility
 		cpt_psize <- plyr::join(cpt, countryCount, by="country")
 		cptr <- cpt_psize[nrow(cpt_psize):1,] # To make the earliest infected (and dead) visible on top
@@ -249,7 +249,7 @@ for (nowi in 1:length(covdates2)) {
 		cpt[cpt$inside == FALSE, "yvec"] <- cpt[cpt$inside == FALSE, "yvec"] * (2 * round(runif(sum(!cpt$inside), min=0, max=1)) - 1)
 		# Collision detection
 		pDistMat <- sp::spDists(as.matrix(cpt[,c("long", "lat")])) # Create distance matrix
-		touchPairs <- which(pDistMat < 0.5, arr.ind=TRUE) # Distance below approximately 50km
+		touchPairs <- which(pDistMat < 0.4, arr.ind=TRUE) # Distance below approximately 50km
 		touchIndex <- touchPairs[touchPairs[,1] != touchPairs[,2], 1] # Remove self distance
 		# Randomly invert movement vector in case of collision
 		if (length(touchIndex) > 0) {
@@ -274,11 +274,11 @@ html <- sprintf('<html><head>
 	<h1>COVID-19 pandemic gaseous visualisation</h1>
 	<video controls autoplay loop><source src="%s" type="video/mp4"></video> 
 	<p>The spread of the pandemic is represented as ideal gases inside each country.
-	Each dot corresponds to 1000 infected (green) or dead (red). 
+	Each dot corresponds to %d infected (green) or dead (red). 
 	Size of points is proportional to country area and number of points in country.</p>
 	<p>Created by Niklaus Fankhauser. Updated: %s</p>
 	<p>Data source: https://github.com/CSSEGISandData/COVID-19</p>
-	</body></html>', videofile, Sys.time())
+	</body></html>', videofile, infected_per_point, Sys.time())
 write(html, file="corona.html")
 
 # Upload to webserver
